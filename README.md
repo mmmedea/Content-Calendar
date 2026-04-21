@@ -4,6 +4,8 @@ A fully editable, browser-based content calendar for managing Instagram and Face
 
 ---
 
+LIVE PAGE: https://mmmedea.github.io/Content-Calendar/
+
 ## ✨ What You Can Do
 
 Every post card is fully editable directly in the browser:
