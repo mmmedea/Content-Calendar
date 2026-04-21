@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Flax + Beets — Content Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --g900:#1B3D2C; --g700:#2D6A4F; --g500:#52B788; --g200:#B7E4C7; --g100:#D8F3DC; --g50:#F0FAF2;
+  --a900:#7D4E00; --a100:#FFF3CD; --a50:#FFFBF0;
+  --b900:#0A3D6B; --b100:#DBEAFE; --b50:#EFF6FF;
+  --p900:#3B0764; --p100:#EDE9FE; --p50:#FAF5FF;
+  --r900:#7F1D1D; --r100:#FEE2E2;
+  --gray900:#111827; --gray700:#374151; --gray500:#6B7280; --gray400:#9CA3AF;
+  --gray300:#D1D5DB; --gray200:#E5E7EB; --gray100:#F3F4F6; --gray50:#F9FAFB;
+  --white:#fff; --radius:10px; --shadow:0 2px 12px rgba(0,0,0,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#EEF1EB;color:var(--gray900);min-height:100vh}
+input,textarea,select{font-family:'DM Sans',sans-serif}
+
+/* ─ HEADER ─ */
+.header{background:var(--g700);padding:28px 32px 24px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;width:360px;height:360px;border-radius:50%;background:rgba(255,255,255,.05);top:-140px;right:-80px;pointer-events:none}
+.header::after{content:'';position:absolute;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.04);bottom:-70px;left:260px;pointer-events:none}
+.h-left .eyebrow{font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:6px}
+.h-left h1{font-family:'DM Serif Display',serif;font-size:32px;color:#fff;font-weight:400;line-height:1.1;margin-bottom:4px}
+.h-left .period{font-size:13px;color:rgba(255,255,255,.6)}
+.h-right{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;position:relative;z-index:1}
+.h-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:500;color:#fff;white-space:nowrap;transition:.2s}
+.h-chip.green{background:rgba(82,183,136,.3)}
+.h-chip.amber{background:rgba(212,160,23,.25)}
+
+/* ─ LAYOUT ─ */
+.page{display:grid;grid-template-columns:218px 1fr;gap:20px;padding:20px 24px 60px;align-items:start}
+
+/* ─ SIDEBAR ─ */
+.sidebar{display:flex;flex-direction:column;gap:14px;position:sticky;top:20px}
+.s-card{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);padding:16px 18px}
+.s-title{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gray500);display:flex;align-items:center;gap:6px;margin-bottom:12px}
+.s-title::before{content:'';width:3px;height:14px;background:var(--g700);border-radius:2px;display:block;flex-shrink:0}
+.t-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
+.t-name{color:var(--gray500)}.t-name.b{color:var(--gray900);font-weight:600}
+.t-val{font-weight:600;color:var(--g700)}.t-val.z{color:var(--gray300);font-weight:400}
+.t-div{height:1px;background:var(--gray100);margin:6px 0}
+.s-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;flex-shrink:0}
+.t-left{display:flex;align-items:center}
+.add-btn{width:100%;margin-top:10px;padding:9px;border-radius:8px;background:var(--g700);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:.15s}
+.add-btn:hover{background:var(--g900)}
+.help-card{background:var(--g50);border:1px solid var(--g200);border-radius:var(--radius);padding:14px 16px;font-size:11px;color:var(--g900);line-height:1.65}
+.help-card strong{display:block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--g700);margin-bottom:6px}
+
+/* ─ GRID ─ */
+.grid-area{}
+.sec-hdr{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gray500);display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:4px}
+.sec-hdr::before{content:'';width:3px;height:14px;background:var(--g700);border-radius:2px;display:block}
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+
+/* ─ CARD ─ */
+.card{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.card.ideation{border-style:dashed;opacity:.85}
+.card-accent{height:4px;flex-shrink:0}
+.card-body{padding:14px 16px;display:flex;flex-direction:column;gap:9px;flex:1}
+
+/* ─ CARD TOP ROW ─ */
+.card-top{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:500;white-space:nowrap;cursor:default}
+.badge-green{background:var(--g100);color:var(--g900)}
+.badge-green2{background:#D1FAE5;color:#065F46}
+.badge-amber{background:var(--a100);color:var(--a900)}
+.badge-blue{background:var(--b100);color:var(--b900)}
+.badge-purple{background:var(--p100);color:var(--p900)}
+.badge-red{background:var(--r100);color:var(--r900)}
+.badge-gray{background:var(--gray100);color:var(--gray700)}
+
+/* ─ EDITABLE DATE ─ */
+.date-input{font-size:12px;font-weight:600;color:var(--gray900);border:none;background:transparent;outline:none;width:90px;cursor:pointer;padding:1px 4px;border-radius:4px}
+.date-input:focus{background:var(--gray100);cursor:text}
+
+/* ─ META ROW ─ */
+.meta-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.plat-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.plat-ig{background:#C13584}.plat-fb{background:#1877F2}.plat-li{background:#0A66C2}.plat-tw{background:#1DA1F2}
+.plat-label{font-size:10px;color:var(--gray500)}
+.sep{font-size:10px;color:var(--gray300)}
+.sel-inline{font-size:10px;color:var(--gray500);border:none;background:transparent;outline:none;cursor:pointer;padding:1px 2px;border-radius:3px;font-family:'DM Sans',sans-serif}
+.sel-inline:focus{background:var(--gray100)}
+
+/* ─ FIELD LABEL ─ */
+.fl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray300);margin-bottom:3px}
+
+/* ─ EDITABLE TEXTAREA ─ */
+.editable{width:100%;border:1px solid transparent;border-radius:6px;padding:6px 8px;font-size:11.5px;color:var(--gray700);line-height:1.65;background:transparent;resize:none;outline:none;font-family:'DM Sans',sans-serif;transition:.15s;min-height:48px}
+.editable:focus{border-color:var(--g500);background:var(--g50)}
+.editable::placeholder{color:var(--gray300);font-style:italic}
+.editable.caption{min-height:80px}
+.editable.hash{color:#1E6BB8;min-height:36px}
+.editable.cta{color:var(--g700);min-height:36px}
+
+/* ─ CTA BOX ─ */
+.cta-wrap{background:var(--g50);border-left:3px solid var(--g500);border-radius:0 6px 6px 0;padding:2px 8px 2px 2px}
+
+/* ─ IMAGE UPLOAD ─ */
+.img-slot{border:1.5px dashed var(--gray300);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px;cursor:pointer;transition:.15s;position:relative;overflow:hidden;min-height:72px}
+.img-slot:hover{border-color:var(--g500);background:var(--g50)}
+.img-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.img-slot .thumb{width:100%;max-height:80px;object-fit:cover;border-radius:5px;display:none}
+.img-slot .img-hint{font-size:10px;color:var(--gray400);text-align:center;line-height:1.4}
+.img-slot .img-icon{font-size:18px;opacity:.4}
+.img-slot.has-img .img-hint,.img-slot.has-img .img-icon{display:none}
+.img-slot.has-img .thumb{display:block}
+.img-slot .remove-img{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.45);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1}
+.img-slot.has-img .remove-img{display:flex}
+
+/* ─ PLATFORM CHECKBOXES ─ */
+.plat-checks{display:flex;gap:8px;flex-wrap:wrap}
+.plat-check{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--gray600,#4B5563);cursor:pointer}
+.plat-check input{accent-color:var(--g700);cursor:pointer}
+
+/* ─ STATUS SELECT ─ */
+.status-sel{font-size:11px;border:1px solid var(--gray200);border-radius:5px;padding:4px 8px;background:var(--white);outline:none;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--gray700);width:100%}
+.status-sel:focus{border-color:var(--g500)}
+
+/* ─ COMMENT ZONE ─ */
+.comment-zone{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray50);border-top:1px solid var(--gray100);margin-top:auto}
+.c-avatar{width:22px;height:22px;border-radius:50%;background:var(--g100);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.c-avatar svg{width:11px;height:11px;opacity:.45}
+.comment-input{flex:1;border:none;background:transparent;font-size:10px;color:var(--gray700);outline:none;font-family:'DM Sans',sans-serif}
+.comment-input::placeholder{color:var(--gray300)}
+.comment-kbd{font-size:9px;background:var(--gray100);color:var(--gray500);border-radius:3px;padding:1px 5px;font-weight:600}
+
+/* ─ DELETE CARD ─ */
+.card-actions{display:flex;justify-content:flex-end;padding:4px 12px 0;gap:6px}
+.del-btn{background:none;border:none;color:var(--gray300);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:4px;transition:.15s}
+.del-btn:hover{color:#EF4444;background:var(--r100)}
+
+/* ─ TOAST ─ */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--gray900);color:#fff;padding:10px 20px;border-radius:30px;font-size:12px;font-weight:500;opacity:0;transition:.3s;z-index:999;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ─ MODAL ─ */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:28px 28px 24px;width:min(520px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h2{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;margin-bottom:4px}
+.modal p{font-size:12px;color:var(--gray500);margin-bottom:20px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-field{display:flex;flex-direction:column;gap:4px}
+.modal-field.full{grid-column:1/-1}
+.modal-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray500)}
+.modal-input{border:1px solid var(--gray200);border-radius:7px;padding:8px 10px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none;color:var(--gray900)}
+.modal-input:focus{border-color:var(--g500)}
+.modal-input.ta{min-height:70px;resize:vertical}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.btn{padding:9px 20px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--g700);color:#fff}
+.btn-primary:hover{background:var(--g900)}
+.btn-ghost{background:var(--gray100);color:var(--gray700)}
+.btn-ghost:hover{background:var(--gray200)}
+.modal-check-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header" id="header">
+  <div class="h-left">
+    <div class="eyebrow">Content Calendar</div>
+    <h1>Flax + Beets</h1>
+    <div class="period" id="h-period">April 2026 · Instagram &amp; Facebook</div>
+  </div>
+  <div class="h-right" id="h-chips"></div>
+</div>
+
+<!-- PAGE -->
+<div class="page">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="s-card">
+      <div class="s-title">Platform Tracker</div>
+      <div id="plat-tracker"></div>
+    </div>
+    <div class="s-card">
+      <div class="s-title">Status Tracker</div>
+      <div id="status-tracker"></div>
+    </div>
+    <button class="add-btn" onclick="openAddModal()">+ Add Post</button>
+    <div class="help-card">
+      <strong>How to edit</strong>
+      Click any field on a card to edit it directly. Changes save automatically and update the trackers instantly.
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid-area" id="grid-area"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">Saved ✓</div>
+
+<!-- ADD MODAL -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h2>Add New Post</h2>
+    <p>Fill in the details for your new content post.</p>
+    <div class="modal-grid">
+      <div class="modal-field">
+        <label class="modal-label">Date</label>
+        <input class="modal-input" id="m-date" type="date"/>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Theme</label>
+        <select class="modal-input" id="m-theme">
+          <option>Educational</option>
+          <option>Social Proof</option>
+          <option>Product/Brand</option>
+          <option>Promotional</option>
+          <option>Community</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Status</label>
+        <select class="modal-input" id="m-status">
+          <option>Ideation</option>
+          <option>In-Progress</option>
+          <option>Ready for Review</option>
+          <option>Scheduled</option>
+          <option>Published</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Format</label>
+        <select class="modal-input" id="m-format">
+          <option>Carousel</option>
+          <option>Static Image</option>
+          <option>Reel</option>
+          <option>Story</option>
+          <option>Video</option>
+          <option>TBD</option>
+        </select>
+      </div>
+      <div class="modal-field full">
+        <label class="modal-label">Platforms</label>
+        <div class="modal-check-row">
+          <label class="plat-check"><input type="checkbox" id="mp-ig" checked> Instagram</label>
+          <label class="plat-check"><input type="checkbox" id="mp-fb" checked> Facebook</label>
+          <label class="plat-check"><input type="checkbox" id="mp-li"> LinkedIn</label>
+          <label class="plat-check"><input type="checkbox" id="mp-tw"> Twitter</label>
+        </div>
+      </div>
+      <div class="modal-field full">
+        <label class="modal-label">Caption</label>
+        <textarea class="modal-input ta" id="m-caption" placeholder="Write your caption..."></textarea>
+      </div>
+      <div class="modal-field full">
+        <label class="modal-label">CTA</label>
+        <input class="modal-input" id="m-cta" placeholder="e.g. 💚 Save this post..."/>
+      </div>
+      <div class="modal-field full">
+        <label class="modal-label">Hashtags</label>
+        <input class="modal-input" id="m-hash" placeholder="#guthealth #flaxandbeets ..."/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addPost()">Add Post</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────
+const STATUSES = ['Ideation','In-Progress','Ready for Review','Scheduled','Published'];
+const FORMATS  = ['Carousel','Static Image','Reel','Story','Video','TBD'];
+const THEMES   = ['Educational','Social Proof','Product/Brand','Promotional','Community'];
+const PLATFORMS = ['Instagram','Facebook','LinkedIn','Twitter'];
+
+let posts = [
+  {id:1,date:'2026-04-17',platforms:['Instagram','Facebook'],theme:'Educational',caption:"Your gut didn't fail you. It changed — and so did the rules.\n\nAfter 40, estrogen levels drop. This can disrupt the gut bacteria that kept your digestion balanced for years. You may start to notice bloating, constipation, or discomfort even when nothing else has changed.",cta:'💚 Save this and follow Flax + Beets for weekly gut health tips',hashtags:'#guthealth #probiotics #perimenopause #hormonehealth #womenover40',format:'Carousel',status:'Ready for Review',image:null},
+  {id:2,date:'2026-04-18',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:"10 years of digestive struggles. One product that finally made a difference.\n\nTheresa's story is more common than you might think. A decade of trying different solutions.",cta:"💚 Have you tried Flax + Beets? Share your experience in the comments.",hashtags:'#guthealth #flaxandbeets #perimenopause #womenover40 #testimonial',format:'Static Image',status:'Ready for Review',image:null},
+  {id:3,date:'2026-04-19',platforms:['Instagram','Facebook'],theme:'Educational',caption:"Most gut health supplements list 20+ ingredients but don't tell you how much of each one is included.\n\nThis is called a proprietary blend.",cta:"💚 Follow Flax + Beets. We share the things the industry doesn't want you to ask.",hashtags:'#guthealth #supplements #cleansupplements #probiotics #flaxandbeets',format:'Reel',status:'Ready for Review',image:null},
+  {id:4,date:'2026-04-20',platforms:['Instagram','Facebook'],theme:'Product/Brand',caption:"Most gut supplements give you one layer and call it a gut health product.\n\nFlax + Beets was built differently — because what your gut needs after 40 isn't a single ingredient. It's a system.",cta:'💚 See the full ingredient breakdown — link in bio.',hashtags:'#guthealth #flaxandbeets #gutsupplement #digestivehealth #perimenopause',format:'Static Image',status:'Ready for Review',image:null},
+  {id:5,date:'2026-04-21',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:"You may have been told it's stress, aging, or just something you have to live with.\n\nBut you're not imagining it.\n\n82% of women say their gut symptoms started or became worse during hormonal changes.",cta:'💚 Save this and share it with someone who needs to hear they\'re not imagining it.',hashtags:'#perimenopause #guthealth #womenshealth #hormonehealth #flaxandbeets',format:'Static Image',status:'Ready for Review',image:null},
+  {id:6,date:'2026-04-14',platforms:['Instagram','Facebook'],theme:'Educational',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',image:null},
+  {id:7,date:'2026-04-15',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',image:null},
+  {id:8,date:'2026-04-16',platforms:['Instagram','Facebook'],theme:'Educational',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',image:null},
+  {id:9,date:'2026-04-17',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',image:null},
+  {id:10,date:'2026-04-18',platforms:['Instagram','Facebook'],theme:'Product/Brand',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',image:null},
+];
+let nextId = 11;
+
+// ── COLORS ───────────────────────────────────
+function themeClass(t){
+  if(t==='Educational')   return 'badge-blue';
+  if(t==='Social Proof')  return 'badge-purple';
+  if(t==='Product/Brand') return 'badge-green';
+  if(t==='Promotional')   return 'badge-amber';
+  return 'badge-gray';
+}
+function statusClass(s){
+  if(s==='Ready for Review') return 'badge-green2';
+  if(s==='Ideation')         return 'badge-amber';
+  if(s==='In-Progress')      return 'badge-blue';
+  if(s==='Scheduled')        return 'badge-green';
+  if(s==='Published')        return 'badge-purple';
+  return 'badge-gray';
+}
+function statusColor(s){
+  if(s==='Ready for Review') return '#2D6A4F';
+  if(s==='Ideation')         return '#D4A017';
+  if(s==='In-Progress')      return '#1877F2';
+  if(s==='Scheduled')        return '#52B788';
+  if(s==='Published')        return '#7C3AED';
+  return '#9CA3AF';
+}
+function statusDotColor(s){return statusColor(s)}
+const platColors={Instagram:'#C13584',Facebook:'#1877F2',LinkedIn:'#0A66C2',Twitter:'#1DA1F2'};
+const platClass={Instagram:'plat-ig',Facebook:'plat-fb',LinkedIn:'plat-li',Twitter:'plat-tw'};
+
+function fmtDate(d){
+  const dt=new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+// ── SIDEBAR ───────────────────────────────────
+function updateSidebar(){
+  // Platform tracker
+  const platCount={};
+  PLATFORMS.forEach(p=>platCount[p]=0);
+  posts.forEach(p=>p.platforms.forEach(pl=>{if(platCount[pl]!==undefined)platCount[pl]++}));
+  const total=posts.length;
+  let ph='';
+  PLATFORMS.forEach(p=>{
+    const c=platCount[p];
+    ph+=`<div class="t-row"><span class="t-name">${p}</span><span class="t-val${c?'':' z'}">${c||'—'}</span></div>`;
+  });
+  ph+=`<div class="t-div"></div><div class="t-row"><span class="t-name b">Total</span><span class="t-val">${total}</span></div>`;
+  document.getElementById('plat-tracker').innerHTML=ph;
+
+  // Status tracker
+  const statusCount={};
+  STATUSES.forEach(s=>statusCount[s]=0);
+  posts.forEach(p=>statusCount[p.status]=(statusCount[p.status]||0)+1);
+  let sh='';
+  STATUSES.forEach(s=>{
+    const c=statusCount[s]||0;
+    sh+=`<div class="t-row"><span class="t-left"><span class="s-dot" style="background:${statusDotColor(s)}"></span><span class="t-name">${s}</span></span><span class="t-val${c?'':' z'}" style="${c?'color:'+statusDotColor(s):''}">${c||'—'}</span></div>`;
+  });
+  document.getElementById('status-tracker').innerHTML=sh;
+
+  // Header chips
+  const ready=posts.filter(p=>p.status==='Ready for Review').length;
+  const ideation=posts.filter(p=>p.status==='Ideation').length;
+  const platSet=[...new Set(posts.flatMap(p=>p.platforms))];
+  document.getElementById('h-chips').innerHTML=
+    `<div class="h-chip">${total} Posts</div>`+
+    `<div class="h-chip">${platSet.length} Platform${platSet.length!==1?'s':''}</div>`+
+    (ready?`<div class="h-chip green">${ready} ✓ Ready</div>`:'')+
+    (ideation?`<div class="h-chip amber">${ideation} Ideation</div>`:'');
+}
+
+// ── RENDER ────────────────────────────────────
+function renderAll(){
+  const area=document.getElementById('grid-area');
+  const ready=posts.filter(p=>p.status==='Ready for Review'||p.status==='Scheduled'||p.status==='Published'||p.status==='In-Progress');
+  const idea =posts.filter(p=>p.status==='Ideation');
+  const other=posts.filter(p=>!ready.includes(p)&&!idea.includes(p));
+
+  let html='';
+
+  if(ready.length){
+    html+=`<div class="sec-hdr">Active Posts &nbsp;(${ready.length})</div><div class="cards-grid" id="cg-ready">`;
+    ready.forEach(p=>html+=cardHTML(p));
+    html+=`</div>`;
+  }
+  if(idea.length){
+    html+=`<div class="sec-hdr">Ideation &nbsp;(${idea.length})</div><div class="cards-grid" id="cg-idea">`;
+    idea.forEach(p=>html+=cardHTML(p));
+    html+=`</div>`;
+  }
+  if(other.length){
+    html+=`<div class="sec-hdr">Other &nbsp;(${other.length})</div><div class="cards-grid">`;
+    other.forEach(p=>html+=cardHTML(p));
+    html+=`</div>`;
+  }
+  area.innerHTML=html;
+
+  // Bind events after render
+  posts.forEach(p=>bindCard(p.id));
+  updateSidebar();
+}
+
+function cardHTML(p){
+  const isIdea=p.status==='Ideation';
+  const accentColor=statusColor(p.status);
+  const platDots=p.platforms.map(pl=>`<span class="plat-dot ${platClass[pl]||''}"></span><span class="plat-label">${pl}</span>`).join('');
+
+  // Platform checkboxes inside card
+  const platChecks=PLATFORMS.map(pl=>`<label class="plat-check"><input type="checkbox" data-id="${p.id}" data-plat="${pl}" ${p.platforms.includes(pl)?'checked':''}> ${pl}</label>`).join('');
+
+  // Format select options
+  const fmtOpts=FORMATS.map(f=>`<option${f===p.format?' selected':''}>${f}</option>`).join('');
+
+  // Status select options
+  const statOpts=STATUSES.map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('');
+
+  // Theme select options
+  const themeOpts=THEMES.map(t=>`<option${t===p.theme?' selected':''}>${t}</option>`).join('');
+
+  const imgSlot=p.image
+    ?`<div class="img-slot has-img" onclick="triggerImg(${p.id})"><img class="thumb" src="${p.image}" alt=""/><input type="file" accept="image/*" onchange="handleImg(event,${p.id})"/><button class="remove-img" onclick="event.stopPropagation();removeImg(${p.id})">✕</button></div>`
+    :`<div class="img-slot" onclick="triggerImg(${p.id})"><span class="img-icon">🖼</span><span class="img-hint">Click to upload image<br><span style="font-size:9px;opacity:.7">JPG, PNG, GIF</span></span><input type="file" id="imgfile-${p.id}" accept="image/*" onchange="handleImg(event,${p.id})"/></div>`;
+
+  return `
+<div class="card${isIdea?' ideation':''}" id="card-${p.id}" data-id="${p.id}">
+  <div class="card-accent" style="background:${accentColor}"></div>
+  <div class="card-actions"><button class="del-btn" onclick="deletePost(${p.id})" title="Delete">✕</button></div>
+  <div class="card-body">
+    <div class="card-top">
+      <input class="date-input" type="date" value="${p.date}" onchange="updateField(${p.id},'date',this.value)" title="Click to change date"/>
+      <span class="badge ${statusClass(p.status)}" id="sbadge-${p.id}">${p.status}</span>
+      <span class="badge ${themeClass(p.theme)}" id="tbadge-${p.id}">${p.theme}</span>
+    </div>
+
+    <div>
+      <div class="fl">Platforms</div>
+      <div class="plat-checks" id="plats-${p.id}">${platChecks}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <div class="fl">Format</div>
+        <select class="status-sel" onchange="updateField(${p.id},'format',this.value)">${fmtOpts}</select>
+      </div>
+      <div>
+        <div class="fl">Status / Legend</div>
+        <select class="status-sel" onchange="updateField(${p.id},'status',this.value)">${statOpts}</select>
+      </div>
+    </div>
+
+    <div>
+      <div class="fl">Theme</div>
+      <select class="status-sel" onchange="updateField(${p.id},'theme',this.value)">${themeOpts}</select>
+    </div>
+
+    <div>
+      <div class="fl">Caption</div>
+      <textarea class="editable caption" placeholder="Write your caption here..." onchange="updateField(${p.id},'caption',this.value)" oninput="autoResize(this)">${escHtml(p.caption)}</textarea>
+    </div>
+
+    <div class="cta-wrap">
+      <div class="fl" style="padding:6px 8px 0">CTA</div>
+      <textarea class="editable cta" placeholder="Call to action..." onchange="updateField(${p.id},'cta',this.value)" oninput="autoResize(this)">${escHtml(p.cta)}</textarea>
+    </div>
+
+    <div>
+      <div class="fl">Hashtags</div>
+      <textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." onchange="updateField(${p.id},'hashtags',this.value)" oninput="autoResize(this)">${escHtml(p.hashtags)}</textarea>
+    </div>
+
+    <div>
+      <div class="fl">Visual / Image</div>
+      ${imgSlot}
+    </div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+    <input class="comment-input" placeholder="Add a comment or note..." type="text"/>
+    <span class="comment-kbd">Note</span>
+  </div>
+</div>`;
+}
+
+function bindCard(id){
+  // Platform checkboxes
+  const platsDiv=document.getElementById(`plats-${id}`);
+  if(platsDiv){
+    platsDiv.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.addEventListener('change',()=>{
+        const post=posts.find(p=>p.id===id);
+        post.platforms=Array.from(platsDiv.querySelectorAll('input:checked')).map(c=>c.dataset.plat);
+        updateSidebar();
+        showToast();
+      });
+    });
+  }
+}
+
+function updateField(id,field,val){
+  const post=posts.find(p=>p.id===id);
+  if(!post)return;
+  post[field]=val;
+  if(field==='status'||field==='theme'){
+    // Re-render just this card's badges + accent
+    const card=document.getElementById(`card-${id}`);
+    if(card){
+      card.className=`card${post.status==='Ideation'?' ideation':''}`;
+      card.querySelector('.card-accent').style.background=statusColor(post.status);
+      const sb=document.getElementById(`sbadge-${id}`);
+      if(sb){sb.className=`badge ${statusClass(post.status)}`;sb.textContent=post.status;}
+      const tb=document.getElementById(`tbadge-${id}`);
+      if(tb){tb.className=`badge ${themeClass(post.theme)}`;tb.textContent=post.theme;}
+    }
+    // Re-bucket if status changed
+    const isIdea=post.status==='Ideation';
+    const wasIdea=card&&card.closest('#cg-idea')!==null;
+    if(isIdea!==wasIdea) renderAll(); else updateSidebar();
+  } else {
+    updateSidebar();
+  }
+  showToast();
+}
+
+function triggerImg(id){
+  const inp=document.getElementById(`imgfile-${id}`);
+  if(inp)inp.click();
+}
+function handleImg(e,id){
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const post=posts.find(p=>p.id===id);
+    post.image=ev.target.result;
+    renderAll();
+    showToast('Image uploaded ✓');
+  };
+  reader.readAsDataURL(file);
+}
+function removeImg(id){
+  const post=posts.find(p=>p.id===id);
+  post.image=null;
+  renderAll();
+}
+
+function deletePost(id){
+  if(!confirm('Delete this post?'))return;
+  posts=posts.filter(p=>p.id!==id);
+  renderAll();
+  showToast('Post deleted');
+}
+
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px'}
+
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ── MODAL ──────────────────────────────────────
+function openAddModal(){document.getElementById('modal-bg').classList.add('open')}
+function closeModal(){document.getElementById('modal-bg').classList.remove('open')}
+function addPost(){
+  const d=document.getElementById('m-date').value;
+  if(!d){alert('Please pick a date');return;}
+  const plats=[];
+  if(document.getElementById('mp-ig').checked)plats.push('Instagram');
+  if(document.getElementById('mp-fb').checked)plats.push('Facebook');
+  if(document.getElementById('mp-li').checked)plats.push('LinkedIn');
+  if(document.getElementById('mp-tw').checked)plats.push('Twitter');
+  if(!plats.length){alert('Select at least one platform');return;}
+  posts.push({
+    id:nextId++,
+    date:d,
+    platforms:plats,
+    theme:document.getElementById('m-theme').value,
+    caption:document.getElementById('m-caption').value,
+    cta:document.getElementById('m-cta').value,
+    hashtags:document.getElementById('m-hash').value,
+    format:document.getElementById('m-format').value,
+    status:document.getElementById('m-status').value,
+    image:null
+  });
+  closeModal();
+  renderAll();
+  showToast('Post added ✓');
+}
+document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+
+// ── TOAST ───────────────────────────────────────
+let toastTimer;
+function showToast(msg='Saved ✓'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+// ── INIT ────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
