@@ -4,10 +4,6 @@ A fully editable, browser-based content calendar for managing Instagram and Face
 
 ---
 
-> Replace the link above with your actual GitHub Pages URL after setup.
-
----
-
 ## ✨ What You Can Do
 
 Every post card is fully editable directly in the browser:
