@@ -1,0 +1,1276 @@
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Flax + Beets — Content Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&amp;family=DM+Serif+Display&amp;display=swap" rel="stylesheet">
+<style>
+/* ─── ROOT ─────────────────────────────── */
+:root{
+  --g900:#1B3D2C;--g700:#2D6A4F;--g500:#52B788;--g200:#B7E4C7;--g100:#D8F3DC;--g50:#F0FAF2;
+  --a900:#7D4E00;--a100:#FFF3CD;
+  --b900:#0A3D6B;--b100:#DBEAFE;
+  --p900:#3B0764;--p100:#EDE9FE;
+  --r900:#7F1D1D;--r100:#FEE2E2;
+  --gray900:#111827;--gray700:#374151;--gray600:#4B5563;--gray500:#6B7280;
+  --gray400:#9CA3AF;--gray300:#D1D5DB;--gray200:#E5E7EB;--gray100:#F3F4F6;--gray50:#F9FAFB;
+  --white:#fff;--radius:10px;--shadow:0 2px 16px rgba(0,0,0,.1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#EEF1EB;color:var(--gray900);min-height:100vh}
+input,textarea,select,button{font-family:'DM Sans',sans-serif}
+
+/* ─── ADMIN SETUP SCREEN ────────────────── */
+#admin-screen{display:none;position:fixed;inset:0;background:#1B3D2C;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:24px;padding:24px}
+#admin-screen.visible{display:flex}
+.admin-box{background:#fff;border-radius:16px;padding:32px;width:min(500px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.admin-box h2{font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;margin-bottom:6px;color:var(--gray900)}
+.admin-box p{font-size:12px;color:var(--gray500);line-height:1.6;margin-bottom:18px}
+.admin-steps{background:var(--gray50);border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:11px;color:var(--gray600);line-height:2}
+.admin-steps code{background:var(--gray200);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px}
+.admin-input{border:1px solid var(--gray200);border-radius:8px;padding:10px 12px;font-size:13px;width:100%;outline:none;margin-bottom:10px;color:var(--gray900)}
+.admin-input:focus{border-color:var(--g500)}
+.admin-btn{width:100%;padding:12px;border-radius:10px;background:var(--g700);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+.admin-btn:hover{background:var(--g900)}
+.admin-note{font-size:11px;color:rgba(255,255,255,.6);text-align:center;max-width:400px;line-height:1.6}
+
+/* ─── SYNC BAR ──────────────────────────── */
+.sync-bar{padding:6px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:#fff;transition:background .3s}
+.sync-bar.saved{background:var(--g700)}
+.sync-bar.dirty{background:#92400E}
+.sync-bar.syncing{background:#1e3a5f}
+.sync-bar.error{background:#7F1D1D}
+.sync-status{display:flex;align-items:center;gap:6px}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:.3s}
+.sync-dot.saved{background:#86efac}
+.sync-dot.dirty{background:#fbbf24;animation:blink 1.2s infinite}
+.sync-dot.syncing{background:#60a5fa;animation:blink .6s infinite}
+.sync-dot.error{background:#f87171}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.sync-actions{display:flex;gap:6px}
+.sbar-btn{padding:4px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
+.sbar-btn.white{background:#fff;color:var(--g700)}.sbar-btn.white:hover{background:var(--g100)}
+.sbar-btn.ghost{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2)}.sbar-btn.ghost:hover{background:rgba(255,255,255,.25)}
+.sbar-btn.red{background:rgba(239,68,68,.25);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}.sbar-btn.red:hover{background:rgba(239,68,68,.4)}
+.live-pill{font-size:10px;background:rgba(134,239,172,.2);border:1px solid rgba(134,239,172,.35);border-radius:10px;padding:1px 8px;color:#bbf7d0;white-space:nowrap}
+
+/* ─── HEADER ────────────────────────────── */
+.header{background:var(--g700);padding:20px 20px 16px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.05);top:-100px;right:-40px;pointer-events:none}
+.h-left{display:flex;flex-direction:column;gap:3px}
+.eyebrow{font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+.h-brand{display:flex;align-items:center;gap:7px}
+.h-brand h1{font-family:'DM Serif Display',serif;font-size:24px;color:#fff;font-weight:400;line-height:1.1}
+.edit-h-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:5px;color:#fff;font-size:10px;padding:3px 7px;cursor:pointer;transition:.15s}
+.edit-h-btn:hover{background:rgba(255,255,255,.25)}
+.h-period{font-size:11px;color:rgba(255,255,255,.6)}
+.h-chips{display:flex;gap:5px;flex-wrap:wrap;position:relative;z-index:1}
+.h-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:500;color:#fff;white-space:nowrap}
+.h-chip.g{background:rgba(82,183,136,.3)}.h-chip.a{background:rgba(212,160,23,.25)}.h-chip.r{background:rgba(239,68,68,.25)}
+
+/* ─── MOB NAV ───────────────────────────── */
+.mob-nav{display:none;background:var(--white);border-bottom:1px solid var(--gray200);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.mob-nav-inner{display:flex;min-width:max-content}
+.mob-tab{padding:10px 16px;font-size:12px;font-weight:500;color:var(--gray500);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:.15s}
+.mob-tab.active{color:var(--g700);border-bottom-color:var(--g700)}
+
+/* ─── LAYOUT ────────────────────────────── */
+.page{display:grid;grid-template-columns:205px 1fr;gap:14px;padding:14px 18px 60px;align-items:start}
+
+/* ─── SIDEBAR ───────────────────────────── */
+.sidebar{display:flex;flex-direction:column;gap:10px;position:sticky;top:14px}
+.s-card{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);padding:12px 14px}
+.s-title{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gray500);display:flex;align-items:center;gap:5px;margin-bottom:8px}
+.s-title::before{content:'';width:3px;height:11px;background:var(--g700);border-radius:2px;display:block;flex-shrink:0}
+.t-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11.5px}
+.t-name{color:var(--gray500)}.t-name.b{color:var(--gray900);font-weight:600}
+.t-val{font-weight:600;color:var(--g700)}.t-val.z{color:var(--gray300);font-weight:400}
+.t-div{height:1px;background:var(--gray100);margin:4px 0}
+.s-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;flex-shrink:0}
+.t-left{display:flex;align-items:center}
+.add-btn{width:100%;margin-top:6px;padding:8px;border-radius:7px;background:var(--g700);color:#fff;border:none;font-size:12px;font-weight:500;cursor:pointer;transition:.15s}
+.add-btn:hover{background:var(--g900)}
+.help-card{background:var(--g50);border:1px solid var(--g200);border-radius:var(--radius);padding:10px 12px;font-size:11px;color:var(--g900);line-height:1.6}
+.help-card strong{display:block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--g700);margin-bottom:3px}
+
+/* ─── GRID ──────────────────────────────── */
+.sec-hdr{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gray500);display:flex;align-items:center;gap:7px;margin-bottom:9px;margin-top:2px}
+.sec-hdr::before{content:'';width:3px;height:11px;background:var(--g700);border-radius:2px;display:block}
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:18px}
+
+/* ─── CARD ──────────────────────────────── */
+.card{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.card.ideation{border-style:dashed;opacity:.85}
+.card-accent{height:4px;flex-shrink:0}
+.card-top-bar{display:flex;justify-content:flex-end;padding:3px 8px 0;gap:3px}
+.del-btn{background:none;border:none;color:var(--gray300);cursor:pointer;font-size:11px;padding:2px 5px;border-radius:3px;transition:.15s;line-height:1}
+.del-btn:hover{color:#EF4444;background:var(--r100)}
+.card-body{padding:10px 12px;display:flex;flex-direction:column;gap:7px;flex:1}
+
+/* ─── BADGES ────────────────────────────── */
+.badge{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:9.5px;font-weight:500;white-space:nowrap}
+.bg{background:var(--g100);color:var(--g900)}
+.bg2{background:#D1FAE5;color:#065F46}
+.ba{background:var(--a100);color:var(--a900)}
+.bb{background:var(--b100);color:var(--b900)}
+.bp{background:var(--p100);color:var(--p900)}
+.bgr{background:var(--gray100);color:var(--gray700)}
+
+/* ─── FIELDS ────────────────────────────── */
+.card-meta{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.date-inp{font-size:11.5px;font-weight:600;color:var(--gray900);border:none;background:transparent;outline:none;max-width:115px;cursor:pointer;padding:1px 3px;border-radius:3px}
+.date-inp:focus{background:var(--gray100)}
+.fl{font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray300);margin-bottom:1px}
+.editable{width:100%;border:1px solid transparent;border-radius:4px;padding:4px 6px;font-size:11px;color:var(--gray700);line-height:1.65;background:transparent;resize:none;outline:none;transition:.15s;min-height:40px}
+.editable:focus{border-color:var(--g500);background:var(--g50)}
+.editable::placeholder{color:var(--gray300);font-style:italic}
+.editable.cap{min-height:64px}
+.editable.hash{color:#1E6BB8;min-height:28px}
+.editable.cta-t{color:var(--g700);min-height:28px}
+.cta-wrap{background:var(--g50);border-left:3px solid var(--g500);border-radius:0 4px 4px 0;padding:1px 6px 1px 2px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.ddw{position:relative}
+.sel{font-size:10.5px;border:1px solid var(--gray200);border-radius:4px;padding:4px 20px 4px 6px;background:var(--white);outline:none;cursor:pointer;color:var(--gray700);width:100%;-webkit-appearance:none;appearance:none}
+.sel:focus{border-color:var(--g500)}
+.ddw::after{content:'▾';position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--gray400);pointer-events:none}
+.plat-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.pchk{display:flex;align-items:center;gap:2px;font-size:10.5px;color:var(--gray600);cursor:pointer;user-select:none}
+.pchk input{accent-color:var(--g700);cursor:pointer;width:11px;height:11px}
+.add-plat-btn{font-size:9.5px;color:var(--g700);background:var(--g50);border:1px dashed var(--g200);border-radius:3px;padding:1px 5px;cursor:pointer;white-space:nowrap;transition:.15s}
+.add-plat-btn:hover{background:var(--g100)}
+
+/* ─── INSTAGRAM IMAGE VIEWER ────────────── */
+.img-viewer{border-radius:8px;overflow:hidden;background:var(--gray900);position:relative}
+.img-viewer.empty{background:var(--gray50);border:1.5px dashed var(--gray300);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:16px;text-align:center;min-height:80px;cursor:pointer}
+.img-viewer.empty .img-icon{font-size:20px;opacity:.3}
+.img-viewer.empty .img-txt{font-size:10px;color:var(--gray400);line-height:1.4}
+.img-viewer.has-img{cursor:pointer}
+/* Instagram aspect ratio 1:1 square by default, can toggle */
+.img-frame{position:relative;width:100%;padding-bottom:100%;background:#000;overflow:hidden}
+.img-frame.portrait{padding-bottom:125%}   /* 4:5 portrait */
+.img-frame.landscape{padding-bottom:56.25%} /* 16:9 */
+.img-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.img-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:3;transition:.15s;backdrop-filter:blur(4px)}
+.img-nav:hover{background:rgba(0,0,0,.75)}
+.img-nav.prev{left:6px}.img-nav.next{right:6px}
+.img-counter{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;pointer-events:none;backdrop-filter:blur(4px)}
+.img-dots{display:flex;justify-content:center;gap:4px;padding:6px;background:rgba(0,0,0,.03)}
+.img-dot{width:5px;height:5px;border-radius:50%;background:var(--gray300);border:none;cursor:pointer;padding:0;transition:.15s}
+.img-dot.active{background:var(--g700)}
+.img-toolbar{display:flex;gap:0;border-top:1px solid var(--gray100)}
+.img-tool-btn{flex:1;padding:5px;font-size:10px;color:var(--gray500);background:none;border:none;cursor:pointer;border-right:1px solid var(--gray100);transition:.15s;display:flex;align-items:center;justify-content:center;gap:3px}
+.img-tool-btn:last-child{border-right:none}
+.img-tool-btn:hover{background:var(--gray50);color:var(--g700)}
+.img-upload-inp{display:none}
+
+/* ratio buttons */
+.ratio-btns{display:flex;gap:3px;padding:4px 6px;background:var(--gray50);border-top:1px solid var(--gray100)}
+.ratio-btn{flex:1;padding:3px 4px;font-size:9px;border:1px solid var(--gray200);border-radius:3px;background:#fff;color:var(--gray600);cursor:pointer;transition:.15s;text-align:center}
+.ratio-btn.active{background:var(--g700);color:#fff;border-color:var(--g700)}
+
+/* ─── FULLSCREEN LIGHTBOX ────────────────── */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;align-items:center;justify-content:center;flex-direction:column}
+.lightbox.open{display:flex}
+.lb-img{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:4px;box-shadow:0 0 40px rgba(0,0,0,.5)}
+.lb-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;backdrop-filter:blur(4px)}
+.lb-close:hover{background:rgba(255,255,255,.3)}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;backdrop-filter:blur(4px)}
+.lb-nav:hover{background:rgba(255,255,255,.3)}
+.lb-nav.prev{left:16px}.lb-nav.next{right:16px}
+.lb-counter{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:12px;background:rgba(0,0,0,.4);padding:4px 12px;border-radius:20px;backdrop-filter:blur(4px)}
+
+/* ─── COMMENT ───────────────────────────── */
+.comment-zone{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--gray50);border-top:1px solid var(--gray100);margin-top:auto}
+.c-ava{width:18px;height:18px;border-radius:50%;background:var(--g100);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.c-ava svg{width:8px;height:8px;opacity:.45}
+.c-inp{flex:1;border:none;background:transparent;font-size:10px;color:var(--gray700);outline:none;min-width:0}
+.c-inp::placeholder{color:var(--gray300)}
+
+/* ─── MODALS ────────────────────────────── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:16px 16px 0 0;padding:16px 16px 30px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,.2)}
+.modal-handle{width:34px;height:4px;background:var(--gray200);border-radius:2px;margin:0 auto 13px}
+.modal h2{font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;margin-bottom:3px}
+.modal-sub{font-size:11px;color:var(--gray500);margin-bottom:12px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mf{display:flex;flex-direction:column;gap:3px}
+.mf.full{grid-column:1/-1}
+.mlabel{font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray500)}
+.minput{border:1px solid var(--gray200);border-radius:6px;padding:8px 10px;font-size:14px;outline:none;color:var(--gray900);width:100%;-webkit-appearance:none;appearance:none}
+.minput:focus{border-color:var(--g500)}
+.minput.ta{min-height:60px;resize:vertical}
+.mactions{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:11px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:.15s}
+.btn-p{background:var(--g700);color:#fff}.btn-p:active{background:var(--g900)}
+.btn-g{background:var(--gray100);color:var(--gray700)}
+.chk-row{display:flex;gap:10px;flex-wrap:wrap;padding-top:2px}
+
+/* platform modal */
+.pm-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:250;align-items:center;justify-content:center}
+.pm-bg.open{display:flex}
+.pm-box{background:#fff;border-radius:11px;padding:18px;width:min(320px,92vw)}
+.pm-box h3{font-family:'DM Serif Display',serif;font-size:16px;font-weight:400;margin-bottom:10px}
+.pm-suggs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.pm-sugg{background:var(--gray100);border:none;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--gray700);transition:.15s}
+.pm-sugg:hover{background:var(--g100);color:var(--g700)}
+.pm-box input{border:1px solid var(--gray200);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;width:100%;margin-bottom:8px}
+.pm-box input:focus{border-color:var(--g500)}
+.pm-acts{display:flex;gap:7px}
+
+/* header edit modal */
+.he-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center}
+.he-bg.open{display:flex}
+.he-box{background:#fff;border-radius:13px;padding:22px;width:min(380px,92vw)}
+.he-box h3{font-family:'DM Serif Display',serif;font-size:17px;font-weight:400;margin-bottom:12px}
+.he-f{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.he-lbl{font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gray500)}
+.he-inp{border:1px solid var(--gray200);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;color:var(--gray900);width:100%}
+.he-inp:focus{border-color:var(--g500)}
+.he-acts{display:flex;gap:7px;margin-top:4px}
+
+/* trash */
+.trash-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:399}
+.trash-ov.open{display:block}
+.trash-panel{display:none;position:fixed;top:0;right:0;height:100%;width:min(360px,100vw);background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.12);z-index:400;flex-direction:column}
+.trash-panel.open{display:flex}
+.trash-hdr{padding:16px 18px 12px;border-bottom:1px solid var(--gray200);display:flex;align-items:center;justify-content:space-between}
+.trash-hdr h3{font-family:'DM Serif Display',serif;font-size:17px;font-weight:400}
+.trash-x{background:none;border:none;font-size:17px;cursor:pointer;color:var(--gray400);padding:2px 5px;border-radius:3px}
+.trash-x:hover{color:var(--gray700);background:var(--gray100)}
+.trash-body{flex:1;overflow-y:auto;padding:12px}
+.trash-empty{text-align:center;padding:36px 16px;color:var(--gray400);font-size:12px}
+.trash-empty .ti{font-size:32px;margin-bottom:6px}
+.trash-item{background:var(--gray50);border:1px solid var(--gray200);border-radius:7px;padding:10px 12px;margin-bottom:8px}
+.trash-item-date{font-size:9.5px;color:var(--gray400);margin-bottom:3px}
+.trash-item-title{font-size:11.5px;font-weight:600;color:var(--gray700);margin-bottom:2px}
+.trash-item-meta{font-size:10px;color:var(--gray500);margin-bottom:6px}
+.trash-acts{display:flex;gap:5px}
+.restore-btn{background:var(--g50);border:1px solid var(--g200);color:var(--g700);border-radius:4px;padding:3px 8px;font-size:10.5px;cursor:pointer;transition:.15s}
+.restore-btn:hover{background:var(--g100)}
+.pdel-btn{background:var(--r100);border:1px solid #fecaca;color:var(--r900);border-radius:4px;padding:3px 8px;font-size:10.5px;cursor:pointer;transition:.15s}
+.pdel-btn:hover{background:#fecaca}
+.trash-footer{padding:10px 14px;border-top:1px solid var(--gray200)}
+.clr-trash{width:100%;padding:8px;border-radius:6px;background:var(--r100);color:var(--r900);border:1px solid #fecaca;font-size:11.5px;font-weight:500;cursor:pointer;transition:.15s}
+.clr-trash:hover{background:#fecaca}
+
+/* ─── TOAST ─────────────────────────────── */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--gray900);color:#fff;padding:8px 18px;border-radius:30px;font-size:11.5px;font-weight:500;opacity:0;transition:.3s;z-index:999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ─── FAB ───────────────────────────────── */
+.fab{display:none;position:fixed;bottom:20px;right:14px;width:48px;height:48px;border-radius:50%;background:var(--g700);color:#fff;border:none;font-size:22px;cursor:pointer;box-shadow:0 4px 14px rgba(45,106,79,.4);z-index:100;align-items:center;justify-content:center;line-height:1}
+.fab:active{background:var(--g900);transform:scale(.95)}
+
+/* ─── RESPONSIVE ────────────────────────── */
+@media(max-width:900px){
+  .page{grid-template-columns:180px 1fr;gap:11px;padding:11px 14px 55px}
+  .cards-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar{position:static}
+}
+@media(max-width:640px){
+  .header{padding:12px 12px 10px}
+  .h-brand h1{font-size:19px}
+  .mob-nav{display:block}
+  .page{grid-template-columns:1fr;gap:0;padding:9px 9px 70px}
+  .sidebar{display:none}.sidebar.mob-active{display:flex;margin-bottom:9px}
+  .cards-grid{grid-template-columns:1fr;gap:9px}
+  .two-col{grid-template-columns:1fr}
+  .mgrid{grid-template-columns:1fr}.mf.full{grid-column:1}
+  .fab{display:flex}
+  .add-btn,.help-card{display:none}
+  .sel,.minput{font-size:16px}
+  .editable{font-size:13px}
+  .sync-bar{padding:5px 10px;font-size:10px}
+}
+@media(max-width:360px){.h-chips{display:none}}
+</style>
+</head>
+<body>
+
+<!-- ═══ ADMIN SETUP SCREEN ════════════════════════════════════════ -->
+<div id="admin-screen" class="visible">
+  <div class="admin-box">
+    <h2>🔗 Admin Setup — Firebase Sync</h2>
+    <p>You are the admin. Paste your Firebase Realtime Database URL below. Once saved, <strong>every device that opens this GitHub link will sync automatically</strong> — no setup needed on their end.</p>
+    <div class="admin-steps">
+      1. Go to <code>console.firebase.google.com</code> → New project<br>
+      2. Click <code>Realtime Database</code> → Create database → <strong>Test mode</strong><br>
+      3. Go to <code>Rules</code> tab → paste: <code>{"rules":{".read":true,".write":true}}</code> → Publish<br>
+      4. Copy the DB URL (e.g. <code>https://your-app-rtdb.firebaseio.com</code>)<br>
+      5. Paste below, click Save, then re-upload this file to GitHub
+    </div>
+    <input class="admin-input" id="admin-fb-input" type="url" placeholder="https://your-project-default-rtdb.firebaseio.com">
+    <button class="admin-btn" onclick="adminSaveFirebase()">Save Firebase URL &amp; Generate File</button>
+  </div>
+  <p class="admin-note">After clicking Save, download the updated file and push it to your GitHub repo. Everyone who opens your GitHub Pages link will then sync automatically — they will never see this screen.</p>
+</div>
+
+<!-- ═══ SYNC BAR ══════════════════════════════════════════════════ -->
+<div class="sync-bar saved" id="sync-bar">
+  <div class="sync-status">
+    <span class="sync-dot saved" id="sync-dot"></span>
+    <span id="sync-label">Offline mode — no Firebase URL set</span>
+    <span class="live-pill" id="live-pill" style="display:none">🔴 Live</span>
+  </div>
+  <div class="sync-actions">
+    <button class="sbar-btn ghost" onclick="openTrash()">🗑 Trash <span id="trash-count"></span></button>
+    <button class="sbar-btn red" onclick="resetToDefault()" style="display:none" id="reset-btn">↩ Reset</button>
+    <button class="sbar-btn white" onclick="saveNow()">💾 Save Now</button>
+  </div>
+</div>
+
+<!-- ═══ HEADER ════════════════════════════════════════════════════ -->
+<div class="header">
+  <div class="h-left">
+    <div class="eyebrow">Content Calendar</div>
+    <div class="h-brand">
+      <h1 id="h-name">Flax + Beets</h1>
+      <button class="edit-h-btn" onclick="openHeEdit()">✏️ Edit</button>
+    </div>
+    <div class="h-period" id="h-period">April 2026 · Instagram &amp; Facebook</div>
+  </div>
+  <div class="h-chips" id="h-chips"><div class="h-chip">10 Posts</div><div class="h-chip">2 Platforms</div><div class="h-chip g">5 ✓ Ready</div><div class="h-chip a">5 Ideation</div></div>
+</div>
+
+<!-- ═══ MOB NAV ═══════════════════════════════════════════════════ -->
+<div class="mob-nav">
+  <div class="mob-nav-inner">
+    <button class="mob-tab active" onclick="mobTab('posts',this)">📋 Posts</button>
+    <button class="mob-tab" onclick="mobTab('tracker',this)">📊 Tracker</button>
+  </div>
+</div>
+
+<!-- ═══ PAGE ══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="sidebar" id="sidebar">
+    <div class="s-card"><div class="s-title">Platform Tracker</div><div id="plat-tracker"><div class="t-row"><span class="t-name">Instagram</span><span class="t-val">10</span></div><div class="t-row"><span class="t-name">Facebook</span><span class="t-val">10</span></div><div class="t-row"><span class="t-name">LinkedIn</span><span class="t-val z">—</span></div><div class="t-row"><span class="t-name">Twitter</span><span class="t-val z">—</span></div><div class="t-row"><span class="t-name">TikTok</span><span class="t-val z">—</span></div><div class="t-div"></div><div class="t-row"><span class="t-name b">Total</span><span class="t-val">10</span></div></div></div>
+    <div class="s-card"><div class="s-title">Status Tracker</div><div id="status-tracker"><div class="t-row"><span class="t-left"><span class="s-dot" style="background:#D4A017"></span><span class="t-name">Ideation</span></span><span class="t-val" style="color:#D4A017" "="">5</span></div><div class="t-row"><span class="t-left"><span class="s-dot" style="background:#1877F2"></span><span class="t-name">In-Progress</span></span><span class="t-val z" "="">—</span></div><div class="t-row"><span class="t-left"><span class="s-dot" style="background:#2D6A4F"></span><span class="t-name">Ready for Review</span></span><span class="t-val" style="color:#2D6A4F" "="">5</span></div><div class="t-row"><span class="t-left"><span class="s-dot" style="background:#52B788"></span><span class="t-name">Scheduled</span></span><span class="t-val z" "="">—</span></div><div class="t-row"><span class="t-left"><span class="s-dot" style="background:#7C3AED"></span><span class="t-name">Published</span></span><span class="t-val z" "="">—</span></div></div></div>
+    <button class="add-btn" onclick="openModal()">+ Add Post</button>
+    <div class="help-card"><strong>Collaborative Editing</strong>Changes sync to all devices in real time. Tap any field to edit.</div>
+  </div>
+  <div id="grid-area"><div class="sec-hdr">Active Posts (5)</div><div class="cards-grid"><div class="card" id="card-1">
+  <div class="card-accent" style="background:#2D6A4F"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(1)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-17" onchange="upd(1,'date',this.value)">
+      <span class="badge bg2" id="sb-1">Ready for Review</span>
+      <span class="badge bb" id="tb-1">Educational</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-1"><label class="pchk"><input type="checkbox" data-id="1" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="1" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="1" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="1" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="1" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(1)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(1,'format',this.value)"><option selected="">Carousel</option><option>Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option>TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(1,'status',this.value)"><option>Ideation</option><option>In-Progress</option><option selected="">Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(1,'theme',this.value)"><option selected="">Educational</option><option>Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(1,'caption',this.value)">Your gut didn't fail you. It changed — and so did the rules.
+
+After 40, estrogen levels drop. This can disrupt the gut bacteria that kept your digestion balanced for years.</textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(1,'cta',this.value)">💚 Save this and follow Flax + Beets for weekly gut health tips</textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(1,'hashtags',this.value)">#guthealth #probiotics #perimenopause #hormonehealth #womenover40</textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(1)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-1" accept="image/*" multiple="" onchange="handleImgs(event,1)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(1)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,1)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(1,'comment',this.value)">
+  </div>
+</div><div class="card" id="card-2">
+  <div class="card-accent" style="background:#2D6A4F"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(2)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-18" onchange="upd(2,'date',this.value)">
+      <span class="badge bg2" id="sb-2">Ready for Review</span>
+      <span class="badge bp" id="tb-2">Social Proof</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-2"><label class="pchk"><input type="checkbox" data-id="2" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="2" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="2" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="2" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="2" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(2)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(2,'format',this.value)"><option>Carousel</option><option selected="">Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option>TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(2,'status',this.value)"><option>Ideation</option><option>In-Progress</option><option selected="">Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(2,'theme',this.value)"><option>Educational</option><option selected="">Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(2,'caption',this.value)">10 years of digestive struggles. One product that finally made a difference.
+
+Theresa's story is more common than you might think.</textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(2,'cta',this.value)">💚 Have you tried Flax + Beets? Share your experience in the comments.</textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(2,'hashtags',this.value)">#guthealth #flaxandbeets #perimenopause #womenover40 #testimonial</textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(2)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-2" accept="image/*" multiple="" onchange="handleImgs(event,2)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(2)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,2)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(2,'comment',this.value)">
+  </div>
+</div><div class="card" id="card-3">
+  <div class="card-accent" style="background:#2D6A4F"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(3)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-19" onchange="upd(3,'date',this.value)">
+      <span class="badge bg2" id="sb-3">Ready for Review</span>
+      <span class="badge bb" id="tb-3">Educational</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-3"><label class="pchk"><input type="checkbox" data-id="3" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="3" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="3" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="3" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="3" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(3)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(3,'format',this.value)"><option>Carousel</option><option>Static Image</option><option selected="">Reel</option><option>Story</option><option>Video</option><option>TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(3,'status',this.value)"><option>Ideation</option><option>In-Progress</option><option selected="">Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(3,'theme',this.value)"><option selected="">Educational</option><option>Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(3,'caption',this.value)">Most gut health supplements list 20+ ingredients but don't tell you how much of each one is included.
+
+This is called a proprietary blend.</textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(3,'cta',this.value)">💚 Follow Flax + Beets. We share things the industry doesn't want you to ask.</textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(3,'hashtags',this.value)">#guthealth #supplements #cleansupplements #probiotics #flaxandbeets</textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(3)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-3" accept="image/*" multiple="" onchange="handleImgs(event,3)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(3)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,3)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(3,'comment',this.value)">
+  </div>
+</div><div class="card" id="card-4">
+  <div class="card-accent" style="background:#2D6A4F"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(4)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-20" onchange="upd(4,'date',this.value)">
+      <span class="badge bg2" id="sb-4">Ready for Review</span>
+      <span class="badge bg" id="tb-4">Product/Brand</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-4"><label class="pchk"><input type="checkbox" data-id="4" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="4" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="4" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="4" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="4" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(4)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(4,'format',this.value)"><option>Carousel</option><option selected="">Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option>TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(4,'status',this.value)"><option>Ideation</option><option>In-Progress</option><option selected="">Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(4,'theme',this.value)"><option>Educational</option><option>Social Proof</option><option selected="">Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(4,'caption',this.value)">Most gut supplements give you one layer.
+
+Flax + Beets was built differently — because what your gut needs after 40 isn't a single ingredient. It's a system.</textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(4,'cta',this.value)">💚 See the full ingredient breakdown — link in bio.</textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(4,'hashtags',this.value)">#guthealth #flaxandbeets #gutsupplement #digestivehealth #perimenopause</textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(4)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-4" accept="image/*" multiple="" onchange="handleImgs(event,4)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(4)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,4)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(4,'comment',this.value)">
+  </div>
+</div><div class="card" id="card-5">
+  <div class="card-accent" style="background:#2D6A4F"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(5)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-21" onchange="upd(5,'date',this.value)">
+      <span class="badge bg2" id="sb-5">Ready for Review</span>
+      <span class="badge bp" id="tb-5">Social Proof</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-5"><label class="pchk"><input type="checkbox" data-id="5" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="5" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="5" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="5" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="5" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(5)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(5,'format',this.value)"><option>Carousel</option><option selected="">Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option>TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(5,'status',this.value)"><option>Ideation</option><option>In-Progress</option><option selected="">Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(5,'theme',this.value)"><option>Educational</option><option selected="">Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(5,'caption',this.value)">You may have been told it's stress, aging, or just something you have to live with.
+
+But you're not imagining it. 82% of women say gut symptoms worsened during hormonal changes.</textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(5,'cta',this.value)">💚 Save this and share it with someone who needs to hear they're not imagining it.</textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(5,'hashtags',this.value)">#perimenopause #guthealth #womenshealth #hormonehealth #flaxandbeets</textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(5)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-5" accept="image/*" multiple="" onchange="handleImgs(event,5)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(5)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,5)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(5,'comment',this.value)">
+  </div>
+</div></div><div class="sec-hdr">Ideation (5)</div><div class="cards-grid"><div class="card ideation" id="card-6">
+  <div class="card-accent" style="background:#D4A017"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(6)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-14" onchange="upd(6,'date',this.value)">
+      <span class="badge ba" id="sb-6">Ideation</span>
+      <span class="badge bb" id="tb-6">Educational</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-6"><label class="pchk"><input type="checkbox" data-id="6" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="6" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="6" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="6" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="6" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(6)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(6,'format',this.value)"><option>Carousel</option><option>Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option selected="">TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(6,'status',this.value)"><option selected="">Ideation</option><option>In-Progress</option><option>Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(6,'theme',this.value)"><option selected="">Educational</option><option>Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(6,'caption',this.value)"></textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(6,'cta',this.value)"></textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(6,'hashtags',this.value)"></textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(6)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-6" accept="image/*" multiple="" onchange="handleImgs(event,6)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(6)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,6)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(6,'comment',this.value)">
+  </div>
+</div><div class="card ideation" id="card-7">
+  <div class="card-accent" style="background:#D4A017"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(7)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-15" onchange="upd(7,'date',this.value)">
+      <span class="badge ba" id="sb-7">Ideation</span>
+      <span class="badge bp" id="tb-7">Social Proof</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-7"><label class="pchk"><input type="checkbox" data-id="7" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="7" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="7" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="7" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="7" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(7)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(7,'format',this.value)"><option>Carousel</option><option>Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option selected="">TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(7,'status',this.value)"><option selected="">Ideation</option><option>In-Progress</option><option>Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(7,'theme',this.value)"><option>Educational</option><option selected="">Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(7,'caption',this.value)"></textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(7,'cta',this.value)"></textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(7,'hashtags',this.value)"></textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(7)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-7" accept="image/*" multiple="" onchange="handleImgs(event,7)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(7)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,7)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(7,'comment',this.value)">
+  </div>
+</div><div class="card ideation" id="card-8">
+  <div class="card-accent" style="background:#D4A017"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(8)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-16" onchange="upd(8,'date',this.value)">
+      <span class="badge ba" id="sb-8">Ideation</span>
+      <span class="badge bb" id="tb-8">Educational</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-8"><label class="pchk"><input type="checkbox" data-id="8" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="8" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="8" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="8" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="8" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(8)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(8,'format',this.value)"><option>Carousel</option><option>Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option selected="">TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(8,'status',this.value)"><option selected="">Ideation</option><option>In-Progress</option><option>Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(8,'theme',this.value)"><option selected="">Educational</option><option>Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(8,'caption',this.value)"></textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(8,'cta',this.value)"></textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(8,'hashtags',this.value)"></textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(8)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-8" accept="image/*" multiple="" onchange="handleImgs(event,8)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(8)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,8)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(8,'comment',this.value)">
+  </div>
+</div><div class="card ideation" id="card-9">
+  <div class="card-accent" style="background:#D4A017"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(9)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-17" onchange="upd(9,'date',this.value)">
+      <span class="badge ba" id="sb-9">Ideation</span>
+      <span class="badge bp" id="tb-9">Social Proof</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-9"><label class="pchk"><input type="checkbox" data-id="9" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="9" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="9" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="9" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="9" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(9)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(9,'format',this.value)"><option>Carousel</option><option>Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option selected="">TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(9,'status',this.value)"><option selected="">Ideation</option><option>In-Progress</option><option>Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(9,'theme',this.value)"><option>Educational</option><option selected="">Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(9,'caption',this.value)"></textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(9,'cta',this.value)"></textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(9,'hashtags',this.value)"></textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(9)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-9" accept="image/*" multiple="" onchange="handleImgs(event,9)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(9)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,9)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(9,'comment',this.value)">
+  </div>
+</div><div class="card ideation" id="card-10">
+  <div class="card-accent" style="background:#D4A017"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(10)" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="2026-04-18" onchange="upd(10,'date',this.value)">
+      <span class="badge ba" id="sb-10">Ideation</span>
+      <span class="badge bg" id="tb-10">Product/Brand</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-10"><label class="pchk"><input type="checkbox" data-id="10" data-plat="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" data-id="10" data-plat="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" data-id="10" data-plat="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" data-id="10" data-plat="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" data-id="10" data-plat="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(10)">+ Add</button></div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(10,'format',this.value)"><option>Carousel</option><option>Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option selected="">TBD</option></select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(10,'status',this.value)"><option selected="">Ideation</option><option>In-Progress</option><option>Ready for Review</option><option>Scheduled</option><option>Published</option></select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(10,'theme',this.value)"><option>Educational</option><option>Social Proof</option><option selected="">Product/Brand</option><option>Promotional</option><option>Community</option></select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(10,'caption',this.value)"></textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(10,'cta',this.value)"></textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(10,'hashtags',this.value)"></textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div><div class="img-viewer empty" onclick="trigUpload(10)">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-10" accept="image/*" multiple="" onchange="handleImgs(event,10)">
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(10)">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple="" onchange="handleImgs(event,10)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"></button>
+    </div></div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="" onchange="upd(10,'comment',this.value)">
+  </div>
+</div></div></div>
+</div>
+
+<button class="fab" onclick="openModal()" aria-label="Add post">+</button>
+<div class="toast" id="toast"></div>
+
+<!-- ═══ LIGHTBOX ══════════════════════════════════════════════════ -->
+<div class="lightbox" id="lightbox" onclick="if(event.target===this)closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <button class="lb-nav prev" id="lb-prev" onclick="lbNav(-1)">‹</button>
+  <img class="lb-img" id="lb-img" src="" alt="">
+  <button class="lb-nav next" id="lb-next" onclick="lbNav(1)">›</button>
+  <div class="lb-counter" id="lb-counter"></div>
+</div>
+
+<!-- ═══ HEADER EDIT ═══════════════════════════════════════════════ -->
+<div class="he-bg" id="he-bg" onclick="if(event.target===this)closeHeEdit()">
+  <div class="he-box">
+    <h3>Edit Header</h3>
+    <div class="he-f"><label class="he-lbl">Brand Name</label><input class="he-inp" id="he-brand" type="text"></div>
+    <div class="he-f"><label class="he-lbl">Month / Period</label><input class="he-inp" id="he-period" type="text"></div>
+    <div class="he-acts">
+      <button class="btn btn-g" style="flex:1;padding:9px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:var(--gray100);color:var(--gray700)" onclick="closeHeEdit()">Cancel</button>
+      <button class="btn btn-p" style="flex:1;padding:9px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:var(--g700);color:#fff" onclick="saveHeEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PLATFORM MODAL ════════════════════════════════════════════ -->
+<div class="pm-bg" id="pm-bg" onclick="if(event.target===this)closePlatModal()">
+  <div class="pm-box">
+    <h3>Add Platform</h3>
+    <div class="pm-suggs" id="pm-suggs"></div>
+    <input type="text" id="pm-inp" placeholder="Custom platform name..." maxlength="30">
+    <div class="pm-acts">
+      <button class="btn btn-g" style="flex:1;padding:8px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--gray100);color:var(--gray700)" onclick="closePlatModal()">Cancel</button>
+      <button class="btn btn-p" style="flex:1;padding:8px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--g700);color:#fff" onclick="addCustomPlat()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TRASH ═════════════════════════════════════════════════════ -->
+<div class="trash-ov" id="trash-ov" onclick="closeTrash()"></div>
+<div class="trash-panel" id="trash-panel">
+  <div class="trash-hdr"><h3>🗑 Trash</h3><button class="trash-x" onclick="closeTrash()">✕</button></div>
+  <div class="trash-body" id="trash-body"></div>
+  <div class="trash-footer"><button class="clr-trash" onclick="clearTrash()">Empty Trash</button></div>
+</div>
+
+<!-- ═══ ADD POST MODAL ════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Add New Post</h2>
+    <p class="modal-sub">Fill in the details — syncs to all devices instantly.</p>
+    <div class="mgrid">
+      <div class="mf"><label class="mlabel">Date</label><input class="minput" id="m-date" type="date"></div>
+      <div class="mf"><label class="mlabel">Theme</label><select class="minput" id="m-theme"><option>Educational</option><option>Social Proof</option><option>Product/Brand</option><option>Promotional</option><option>Community</option></select></div>
+      <div class="mf"><label class="mlabel">Status</label><select class="minput" id="m-status"><option>Ideation</option><option>In-Progress</option><option>Ready for Review</option><option>Scheduled</option><option>Published</option></select></div>
+      <div class="mf"><label class="mlabel">Format</label><select class="minput" id="m-format"><option>Carousel</option><option>Static Image</option><option>Reel</option><option>Story</option><option>Video</option><option>TBD</option></select></div>
+      <div class="mf full"><label class="mlabel">Platforms</label><div class="chk-row" id="m-plat-checks"><label class="pchk"><input type="checkbox" class="mpc" value="Instagram" checked=""> Instagram</label><label class="pchk"><input type="checkbox" class="mpc" value="Facebook" checked=""> Facebook</label><label class="pchk"><input type="checkbox" class="mpc" value="LinkedIn"> LinkedIn</label><label class="pchk"><input type="checkbox" class="mpc" value="Twitter"> Twitter</label><label class="pchk"><input type="checkbox" class="mpc" value="TikTok"> TikTok</label><button class="add-plat-btn" onclick="openPlatModal(null);closeModal()" style="margin-left:2px">+ Add</button></div></div>
+      <div class="mf full"><label class="mlabel">Caption</label><textarea class="minput ta" id="m-caption" placeholder="Write your caption..."></textarea></div>
+      <div class="mf full"><label class="mlabel">CTA</label><input class="minput" id="m-cta" placeholder="e.g. 💚 Save this post..."></div>
+      <div class="mf full"><label class="mlabel">Hashtags</label><input class="minput" id="m-hash" placeholder="#guthealth #flaxandbeets ..."></div>
+    </div>
+    <div class="mactions"><button class="btn btn-g" onclick="closeModal()">Cancel</button><button class="btn btn-p" onclick="addPost()">Add Post</button></div>
+  </div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  FIREBASE URL — Admin sets this once, applies to everyone   ║
+// ║  Replace the empty string with your Firebase URL            ║
+// ║  e.g. "https://your-app-rtdb.firebaseio.com"               ║
+// ╚══════════════════════════════════════════════════════════════╝
+const FIREBASE_URL = "https://content-calendar-e7d88-default-rtdb.asia-southeast1.firebasedatabase.app";  // ← ADMIN: paste your Firebase URL here
+
+const FB_DATA_PATH  = "/caldata.json";
+const FB_VER_PATH   = "/caldata/_ver.json";
+const LOCAL_KEY     = "fb_cal_v5";
+const STATUSES      = ['Ideation','In-Progress','Ready for Review','Scheduled','Published'];
+const FORMATS       = ['Carousel','Static Image','Reel','Story','Video','TBD'];
+const THEMES        = ['Educational','Social Proof','Product/Brand','Promotional','Community'];
+const DEF_PLATS     = ['Instagram','Facebook','LinkedIn','Twitter','TikTok'];
+
+// ── DEFAULT DATA ────────────────────────────────────────────────
+const DEFAULT = {
+  header:{brand:'Flax + Beets',period:'April 2026 · Instagram & Facebook'},
+  platforms:[...DEF_PLATS],
+  posts:[
+    {id:1,date:'2026-04-17',platforms:['Instagram','Facebook'],theme:'Educational',caption:"Your gut didn't fail you. It changed — and so did the rules.\n\nAfter 40, estrogen levels drop. This can disrupt the gut bacteria that kept your digestion balanced for years.",cta:'💚 Save this and follow Flax + Beets for weekly gut health tips',hashtags:'#guthealth #probiotics #perimenopause #hormonehealth #womenover40',format:'Carousel',status:'Ready for Review',imgs:[],ratio:'square',comment:''},
+    {id:2,date:'2026-04-18',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:"10 years of digestive struggles. One product that finally made a difference.\n\nTheresa's story is more common than you might think.",cta:"💚 Have you tried Flax + Beets? Share your experience in the comments.",hashtags:'#guthealth #flaxandbeets #perimenopause #womenover40 #testimonial',format:'Static Image',status:'Ready for Review',imgs:[],ratio:'square',comment:''},
+    {id:3,date:'2026-04-19',platforms:['Instagram','Facebook'],theme:'Educational',caption:"Most gut health supplements list 20+ ingredients but don't tell you how much of each one is included.\n\nThis is called a proprietary blend.",cta:"💚 Follow Flax + Beets. We share things the industry doesn't want you to ask.",hashtags:'#guthealth #supplements #cleansupplements #probiotics #flaxandbeets',format:'Reel',status:'Ready for Review',imgs:[],ratio:'square',comment:''},
+    {id:4,date:'2026-04-20',platforms:['Instagram','Facebook'],theme:'Product/Brand',caption:"Most gut supplements give you one layer.\n\nFlax + Beets was built differently — because what your gut needs after 40 isn't a single ingredient. It's a system.",cta:'💚 See the full ingredient breakdown — link in bio.',hashtags:'#guthealth #flaxandbeets #gutsupplement #digestivehealth #perimenopause',format:'Static Image',status:'Ready for Review',imgs:[],ratio:'square',comment:''},
+    {id:5,date:'2026-04-21',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:"You may have been told it's stress, aging, or just something you have to live with.\n\nBut you're not imagining it. 82% of women say gut symptoms worsened during hormonal changes.",cta:"💚 Save this and share it with someone who needs to hear they're not imagining it.",hashtags:'#perimenopause #guthealth #womenshealth #hormonehealth #flaxandbeets',format:'Static Image',status:'Ready for Review',imgs:[],ratio:'square',comment:''},
+    {id:6,date:'2026-04-14',platforms:['Instagram','Facebook'],theme:'Educational',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',imgs:[],ratio:'square',comment:''},
+    {id:7,date:'2026-04-15',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',imgs:[],ratio:'square',comment:''},
+    {id:8,date:'2026-04-16',platforms:['Instagram','Facebook'],theme:'Educational',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',imgs:[],ratio:'square',comment:''},
+    {id:9,date:'2026-04-17',platforms:['Instagram','Facebook'],theme:'Social Proof',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',imgs:[],ratio:'square',comment:''},
+    {id:10,date:'2026-04-18',platforms:['Instagram','Facebook'],theme:'Product/Brand',caption:'',cta:'',hashtags:'',format:'TBD',status:'Ideation',imgs:[],ratio:'square',comment:''},
+  ],
+  trash:[],nextId:11,carousel:{},_ver:0
+};
+
+// ── RUNTIME ─────────────────────────────────────────────────────
+let S           = loadLocal();
+let dirty       = false;
+let syncing     = false;
+let lastVer     = null;
+let saveTimer   = null;
+let pollTimer   = null;
+let lbPostId    = null;
+let lbIdx       = 0;
+let platCardId  = null;
+
+// ── ADMIN SETUP ──────────────────────────────────────────────────
+// If no Firebase URL is hardcoded, show admin screen
+if (!FIREBASE_URL) {
+  document.getElementById('admin-screen').classList.add('visible');
+}
+
+function adminSaveFirebase() {
+  const url = document.getElementById('admin-fb-input').value.trim();
+  if (!url || !url.startsWith('https://')) { alert('Enter a valid Firebase URL starting with https://'); return; }
+  // Generate updated file content with URL injected
+  const script = document.querySelector('script').outerHTML;
+  const newCode = `const FIREBASE_URL = "${url.replace(/\/+$/, '')}";`;
+  const blob = new Blob([document.documentElement.outerHTML.replace('const FIREBASE_URL = "";', newCode)], {type:'text/html'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'index.html'; a.click();
+  alert('✅ File downloaded! Upload this index.html to your GitHub repo. Everyone who opens the link will sync automatically.');
+}
+
+// ── LOCAL STORAGE ────────────────────────────────────────────────
+function loadLocal() {
+  try {
+    const r = localStorage.getItem(LOCAL_KEY);
+    if (r) return migrate(JSON.parse(r));
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT));
+}
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(S)); } catch(e) {}
+}
+function migrate(p) {
+  p.posts = (p.posts||[]).map(x => ({...x, imgs: x.imgs||x.images||[], ratio: x.ratio||'square', comment: x.comment||''}));
+  if (!p.platforms) p.platforms = [...DEF_PLATS];
+  if (!p.trash) p.trash = [];
+  if (!p.carousel) p.carousel = {};
+  if (!p.header) p.header = DEFAULT.header;
+  if (!p._ver) p._ver = 0;
+  return p;
+}
+
+// ── IMAGE COMPRESSION ────────────────────────────────────────────
+// Compress to max 600px wide, JPEG quality 0.6 → ~30-80KB each
+function compressImage(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 600;
+      let {width: w, height: h} = img;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.6));
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+}
+
+// ── FIREBASE REST ────────────────────────────────────────────────
+function fbBase() { return FIREBASE_URL.replace(/\/+$/, ''); }
+
+async function fbPush() {
+  if (!FIREBASE_URL || syncing) return false;
+  syncing = true;
+  setSyncState('syncing', 'Syncing to all devices...');
+  try {
+    const ver = Date.now();
+    const payload = {...S, _ver: ver, _saved: new Date().toISOString()};
+    const res = await fetch(fbBase() + FB_DATA_PATH, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(res.status);
+    lastVer = ver;
+    S._ver = ver;
+    dirty = false;
+    saveLocal();
+    setSyncState('saved', 'Synced ✓ — all devices updated');
+    showLivePill(true);
+    return true;
+  } catch(e) {
+    setSyncState('error', 'Sync failed — check Firebase URL');
+    toast('⚠️ Firebase sync failed');
+    return false;
+  } finally { syncing = false; }
+}
+
+async function fbPull() {
+  if (!FIREBASE_URL) return null;
+  try {
+    const res = await fetch(fbBase() + FB_DATA_PATH + '?print=pretty');
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d || !d.posts) return null;
+    return d;
+  } catch(e) { return null; }
+}
+
+async function fbCheckVer() {
+  if (!FIREBASE_URL || syncing || dirty) return;
+  try {
+    const res = await fetch(fbBase() + FB_VER_PATH);
+    if (!res.ok) return;
+    const v = await res.json();
+    if (v && v !== lastVer) {
+      const data = await fbPull();
+      if (data) {
+        lastVer = data._ver;
+        S = migrate(data);
+        saveLocal();
+        renderAll(); applyHeader();
+        setSyncState('saved', 'Updated from another device ✓');
+        toast('📡 Synced from another device');
+      }
+    }
+  } catch(e) {}
+}
+
+function startPolling() {
+  clearInterval(pollTimer);
+  if (!FIREBASE_URL) return;
+  pollTimer = setInterval(fbCheckVer, 15000); // every 15s
+}
+
+// ── SAVE LOGIC ───────────────────────────────────────────────────
+function markDirty() {
+  dirty = true;
+  setSyncState('dirty', 'Unsaved changes...');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 2500);
+}
+function saveNow() {
+  clearTimeout(saveTimer);
+  if (FIREBASE_URL) { fbPush(); }
+  else { saveLocal(); dirty = false; setSyncState('saved', 'Saved locally'); toast('Saved ✓'); }
+}
+function resetToDefault() {
+  if (!confirm('Reset all data to defaults? Cannot be undone.')) return;
+  localStorage.removeItem(LOCAL_KEY);
+  S = JSON.parse(JSON.stringify(DEFAULT));
+  dirty = false; renderAll(); applyHeader();
+  if (FIREBASE_URL) fbPush(); else setSyncState('saved','Reset complete');
+  toast('Reset to default');
+}
+
+function setSyncState(s, label) {
+  const bar = document.getElementById('sync-bar');
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  bar.className = 'sync-bar ' + s;
+  dot.className = 'sync-dot ' + s;
+  lbl.textContent = label;
+  document.getElementById('trash-count').textContent = S.trash.length ? `(${S.trash.length})` : '';
+}
+function showLivePill(show) {
+  const p = document.getElementById('live-pill');
+  p.style.display = (show && FIREBASE_URL) ? '' : 'none';
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function tC(t){return t==='Educational'?'bb':t==='Social Proof'?'bp':t==='Product/Brand'?'bg':t==='Promotional'?'ba':'bgr';}
+function sC(s){return s==='Ready for Review'?'bg2':s==='Ideation'?'ba':s==='In-Progress'?'bb':s==='Scheduled'?'bg':s==='Published'?'bp':'bgr';}
+function sColor(s){return s==='Ready for Review'?'#2D6A4F':s==='Ideation'?'#D4A017':s==='In-Progress'?'#1877F2':s==='Scheduled'?'#52B788':s==='Published'?'#7C3AED':'#9CA3AF';}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function ar(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
+let tTimer;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tTimer);tTimer=setTimeout(()=>t.classList.remove('show'),2200);}
+
+// ── HEADER ───────────────────────────────────────────────────────
+function applyHeader(){
+  document.getElementById('h-name').textContent = S.header.brand;
+  document.getElementById('h-period').textContent = S.header.period;
+  document.title = S.header.brand + ' — Content Calendar';
+}
+function openHeEdit(){document.getElementById('he-brand').value=S.header.brand;document.getElementById('he-period').value=S.header.period;document.getElementById('he-bg').classList.add('open');}
+function closeHeEdit(){document.getElementById('he-bg').classList.remove('open');}
+function saveHeEdit(){
+  S.header.brand=document.getElementById('he-brand').value.trim()||S.header.brand;
+  S.header.period=document.getElementById('he-period').value.trim()||S.header.period;
+  applyHeader();closeHeEdit();markDirty();toast('Header updated');
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────────
+function updateSidebar() {
+  const pc = {}; S.platforms.forEach(p => pc[p]=0);
+  S.posts.forEach(p => p.platforms.forEach(pl => { if(pc[pl]!==undefined) pc[pl]++; }));
+  let ph = '';
+  S.platforms.forEach(p => { const c=pc[p]; ph+=`<div class="t-row"><span class="t-name">${esc(p)}</span><span class="t-val${c?'':' z'}">${c||'—'}</span></div>`; });
+  ph += `<div class="t-div"></div><div class="t-row"><span class="t-name b">Total</span><span class="t-val">${S.posts.length}</span></div>`;
+  document.getElementById('plat-tracker').innerHTML = ph;
+
+  const sc = {}; STATUSES.forEach(s=>sc[s]=0);
+  S.posts.forEach(p => { sc[p.status]=(sc[p.status]||0)+1; });
+  let sh = '';
+  STATUSES.forEach(s => { const c=sc[s]||0; sh+=`<div class="t-row"><span class="t-left"><span class="s-dot" style="background:${sColor(s)}"></span><span class="t-name">${s}</span></span><span class="t-val${c?'':' z'}"${c?` style="color:${sColor(s)}"`:''}">${c||'—'}</span></div>`; });
+  document.getElementById('status-tracker').innerHTML = sh;
+
+  const ready = S.posts.filter(p=>p.status==='Ready for Review').length;
+  const idea  = S.posts.filter(p=>p.status==='Ideation').length;
+  const ps    = [...new Set(S.posts.flatMap(p=>p.platforms))];
+  document.getElementById('h-chips').innerHTML =
+    `<div class="h-chip">${S.posts.length} Posts</div>`+
+    `<div class="h-chip">${ps.length} Platform${ps.length!==1?'s':''}</div>`+
+    (ready?`<div class="h-chip g">${ready} ✓ Ready</div>`:'')+
+    (idea?`<div class="h-chip a">${idea} Ideation</div>`:'')+
+    (S.trash.length?`<div class="h-chip r">🗑 ${S.trash.length}</div>`:'');
+  document.getElementById('trash-count').textContent = S.trash.length?`(${S.trash.length})`:'';
+}
+
+// ── IMAGE VIEWER HTML ─────────────────────────────────────────────
+function imgViewerHTML(p) {
+  const imgs = p.imgs || [];
+  const cur  = Math.min(S.carousel[p.id]||0, Math.max(0,imgs.length-1));
+  const ratio = p.ratio || 'square';
+
+  if (!imgs.length) {
+    return `<div class="img-viewer empty" onclick="trigUpload(${p.id})">
+      <span class="img-icon">🖼</span>
+      <span class="img-txt">Tap to upload images<br><span style="font-size:9px">Multiple supported · Syncs across devices</span></span>
+      <input type="file" class="img-upload-inp" id="ifu-${p.id}" accept="image/*" multiple onchange="handleImgs(event,${p.id})"/>
+    </div>
+    <div class="img-toolbar">
+      <button class="img-tool-btn" onclick="trigUpload(${p.id})">📎 Add Image<input type="file" class="img-upload-inp" accept="image/*" multiple onchange="handleImgs(event,${p.id})" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/></button>
+    </div>`;
+  }
+
+  const slides = imgs.map((src,i) =>
+    `<div class="carousel-slide" style="${i===cur?'':'display:none'}">
+      <div class="img-frame ${ratio}">
+        <img src="${src}" alt="Slide ${i+1}" onclick="openLightbox(${p.id},${i})" style="cursor:zoom-in"/>
+        <button class="img-nav prev" onclick="goSlide(${p.id},${cur>0?cur-1:imgs.length-1})" style="${imgs.length<2?'display:none':''}">‹</button>
+        <button class="img-nav next" onclick="goSlide(${p.id},${cur<imgs.length-1?cur+1:0})" style="${imgs.length<2?'display:none':''}">›</button>
+        ${imgs.length>1?`<span class="img-counter">${cur+1}/${imgs.length}</span>`:''}
+        <button style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:4" onclick="removeImg(${p.id},${i})" title="Remove">✕</button>
+      </div>
+    </div>`
+  ).join('');
+
+  const dots = imgs.length>1 ? imgs.map((_,i)=>`<button class="img-dot${i===cur?' active':''}" onclick="goSlide(${p.id},${i})"></button>`).join('') : '';
+
+  return `<div class="img-viewer has-img" id="iv-${p.id}">
+    ${slides}
+    ${dots?`<div class="img-dots">${dots}</div>`:''}
+  </div>
+  <div class="ratio-btns">
+    <button class="ratio-btn${ratio==='square'?' active':''}" onclick="setRatio(${p.id},'square')">1:1</button>
+    <button class="ratio-btn${ratio==='portrait'?' active':''}" onclick="setRatio(${p.id},'portrait')">4:5</button>
+    <button class="ratio-btn${ratio==='landscape'?' active':''}" onclick="setRatio(${p.id},'landscape')">16:9</button>
+    <button class="ratio-btn" onclick="openLightbox(${p.id},${cur})" style="background:var(--g50);border-color:var(--g200);color:var(--g700)">⛶ Full</button>
+  </div>
+  <div class="img-toolbar">
+    <button class="img-tool-btn" style="position:relative">📎 Add More (${imgs.length})
+      <input type="file" accept="image/*" multiple onchange="handleImgs(event,${p.id})" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+    </button>
+    <button class="img-tool-btn" onclick="openLightbox(${p.id},${cur})">🔍 Fullscreen</button>
+  </div>`;
+}
+
+function trigUpload(id) { const e = document.getElementById(`ifu-${id}`); if(e) e.click(); }
+
+async function handleImgs(e, id) {
+  const files = Array.from(e.target.files); if(!files.length) return;
+  const post = S.posts.find(p=>p.id===id); if(!post) return;
+  toast('Compressing images...');
+  const compressed = await Promise.all(files.map(f => compressImage(f)));
+  post.imgs = post.imgs || [];
+  post.imgs.push(...compressed);
+  markDirty(); renderAll(); toast(`${files.length} image${files.length>1?'s':''} added & syncing`);
+}
+
+function removeImg(id, idx) {
+  const post = S.posts.find(p=>p.id===id); if(!post) return;
+  post.imgs.splice(idx,1);
+  const c = S.carousel[id]||0; if(c>=post.imgs.length) S.carousel[id]=Math.max(0,post.imgs.length-1);
+  markDirty(); renderAll();
+}
+
+function goSlide(id, idx) {
+  S.carousel[id] = idx;
+  const iv = document.getElementById(`iv-${id}`); if(!iv) return;
+  iv.querySelectorAll('.carousel-slide').forEach((s,i)=>s.style.display=i===idx?'':'none');
+  iv.querySelectorAll('.img-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+  const cnt = iv.querySelector('.img-counter'); if(cnt){const p=S.posts.find(x=>x.id===id);cnt.textContent=`${idx+1}/${p?p.imgs.length:1}`;}
+}
+
+function setRatio(id, ratio) {
+  const post = S.posts.find(p=>p.id===id); if(!post) return;
+  post.ratio = ratio; markDirty(); renderAll();
+}
+
+// ── LIGHTBOX ─────────────────────────────────────────────────────
+function openLightbox(postId, idx) {
+  const post = S.posts.find(p=>p.id===postId); if(!post||!post.imgs.length) return;
+  lbPostId = postId; lbIdx = idx;
+  document.getElementById('lb-img').src = post.imgs[idx];
+  document.getElementById('lb-counter').textContent = post.imgs.length>1?`${idx+1} / ${post.imgs.length}`:'';
+  document.getElementById('lb-prev').style.display = post.imgs.length>1?'':'none';
+  document.getElementById('lb-next').style.display = post.imgs.length>1?'':'none';
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow='';
+}
+function lbNav(dir) {
+  const post = S.posts.find(p=>p.id===lbPostId); if(!post) return;
+  lbIdx = (lbIdx+dir+post.imgs.length)%post.imgs.length;
+  document.getElementById('lb-img').src = post.imgs[lbIdx];
+  document.getElementById('lb-counter').textContent = `${lbIdx+1} / ${post.imgs.length}`;
+}
+document.addEventListener('keydown', e => {
+  if (document.getElementById('lightbox').classList.contains('open')) {
+    if(e.key==='Escape')closeLightbox();
+    if(e.key==='ArrowLeft')lbNav(-1);
+    if(e.key==='ArrowRight')lbNav(1);
+  }
+});
+
+// ── RENDER ────────────────────────────────────────────────────────
+function renderAll() {
+  const area = document.getElementById('grid-area');
+  const active = S.posts.filter(p=>p.status!=='Ideation');
+  const idea   = S.posts.filter(p=>p.status==='Ideation');
+  let html = '';
+  if(active.length){html+=`<div class="sec-hdr">Active Posts (${active.length})</div><div class="cards-grid">`;active.forEach(p=>{html+=cardHTML(p);});html+=`</div>`;}
+  if(idea.length){html+=`<div class="sec-hdr">Ideation (${idea.length})</div><div class="cards-grid">`;idea.forEach(p=>{html+=cardHTML(p);});html+=`</div>`;}
+  area.innerHTML = html;
+  S.posts.forEach(p=>bindCard(p.id));
+  updateSidebar(); renderModalPlatChecks();
+}
+
+function cardHTML(p) {
+  const isIdea = p.status==='Ideation';
+  const fOpts  = FORMATS.map(f=>`<option${f===p.format?' selected':''}>${f}</option>`).join('');
+  const sOpts  = STATUSES.map(s=>`<option${s===p.status?' selected':''}>${s}</option>`).join('');
+  const tOpts  = THEMES.map(t=>`<option${t===p.theme?' selected':''}>${t}</option>`).join('');
+  const pChks  = S.platforms.map(pl=>`<label class="pchk"><input type="checkbox" data-id="${p.id}" data-plat="${esc(pl)}"${p.platforms.includes(pl)?' checked':''}> ${esc(pl)}</label>`).join('')
+               + `<button class="add-plat-btn" onclick="openPlatModal(${p.id})">+ Add</button>`;
+  return `<div class="card${isIdea?' ideation':''}" id="card-${p.id}">
+  <div class="card-accent" style="background:${sColor(p.status)}"></div>
+  <div class="card-top-bar"><button class="del-btn" onclick="delPost(${p.id})" title="Move to Trash">🗑</button></div>
+  <div class="card-body">
+    <div class="card-meta">
+      <input class="date-inp" type="date" value="${p.date}" onchange="upd(${p.id},'date',this.value)"/>
+      <span class="badge ${sC(p.status)}" id="sb-${p.id}">${p.status}</span>
+      <span class="badge ${tC(p.theme)}" id="tb-${p.id}">${p.theme}</span>
+    </div>
+    <div><div class="fl">Platforms</div><div class="plat-row" id="pr-${p.id}">${pChks}</div></div>
+    <div class="two-col">
+      <div><div class="fl">Format</div><div class="ddw"><select class="sel" onchange="upd(${p.id},'format',this.value)">${fOpts}</select></div></div>
+      <div><div class="fl">Status</div><div class="ddw"><select class="sel" onchange="upd(${p.id},'status',this.value)">${sOpts}</select></div></div>
+    </div>
+    <div><div class="fl">Theme</div><div class="ddw"><select class="sel" onchange="upd(${p.id},'theme',this.value)">${tOpts}</select></div></div>
+    <div><div class="fl">Caption</div><textarea class="editable cap" placeholder="Write your caption..." oninput="ar(this)" onchange="upd(${p.id},'caption',this.value)">${esc(p.caption)}</textarea></div>
+    <div class="cta-wrap"><div class="fl" style="padding:4px 6px 0">CTA</div><textarea class="editable cta-t" placeholder="Call to action..." oninput="ar(this)" onchange="upd(${p.id},'cta',this.value)">${esc(p.cta)}</textarea></div>
+    <div><div class="fl">Hashtags</div><textarea class="editable hash" placeholder="#hashtag1 #hashtag2..." oninput="ar(this)" onchange="upd(${p.id},'hashtags',this.value)">${esc(p.hashtags)}</textarea></div>
+    <div><div class="fl" style="margin-bottom:4px">Images</div>${imgViewerHTML(p)}</div>
+  </div>
+  <div class="comment-zone">
+    <div class="c-ava"><svg viewBox="0 0 24 24" fill="none" stroke="#2D6A4F" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+    <input class="c-inp" placeholder="Add a note..." type="text" value="${esc(p.comment||'')}" onchange="upd(${p.id},'comment',this.value)"/>
+  </div>
+</div>`;
+}
+
+function bindCard(id) {
+  const d = document.getElementById(`pr-${id}`); if(!d) return;
+  d.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      const post=S.posts.find(p=>p.id===id);
+      post.platforms=Array.from(d.querySelectorAll('input:checked')).map(c=>c.dataset.plat);
+      updateSidebar();markDirty();
+    });
+  });
+}
+
+function upd(id, field, val) {
+  const post = S.posts.find(p=>p.id===id); if(!post) return;
+  post[field] = val;
+  if(field==='status'||field==='theme'){
+    const ca = document.getElementById(`card-${id}`);
+    if(ca){ca.querySelector('.card-accent').style.background=sColor(post.status);ca.className=`card${post.status==='Ideation'?' ideation':''}`;}
+    const sb=document.getElementById(`sb-${id}`);if(sb){sb.className=`badge ${sC(post.status)}`;sb.textContent=post.status;}
+    const tb=document.getElementById(`tb-${id}`);if(tb){tb.className=`badge ${tC(post.theme)}`;tb.textContent=post.theme;}
+    renderAll();markDirty();return;
+  }
+  updateSidebar();markDirty();
+}
+
+// ── TRASH ─────────────────────────────────────────────────────────
+function delPost(id) {
+  const post=S.posts.find(p=>p.id===id);if(!post)return;
+  S.trash.unshift({...post,deletedAt:new Date().toISOString()});
+  S.posts=S.posts.filter(p=>p.id!==id);
+  renderAll();markDirty();renderTrash();toast('Moved to Trash — restore anytime');
+}
+function openTrash(){renderTrash();document.getElementById('trash-panel').classList.add('open');document.getElementById('trash-ov').classList.add('open');}
+function closeTrash(){document.getElementById('trash-panel').classList.remove('open');document.getElementById('trash-ov').classList.remove('open');}
+function renderTrash(){
+  const b=document.getElementById('trash-body');
+  if(!S.trash.length){b.innerHTML=`<div class="trash-empty"><div class="ti">🗑</div><p>Trash is empty</p></div>`;return;}
+  b.innerHTML=S.trash.map((p,i)=>{
+    const d=new Date(p.deletedAt);
+    const w=d.toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="trash-item">
+      <div class="trash-item-date">Deleted ${w}</div>
+      <div class="trash-item-title">${esc(p.theme)} · ${p.date}</div>
+      <div class="trash-item-meta">${esc(p.platforms.join(', '))} · ${p.format} · ${p.status}</div>
+      ${p.caption?`<div style="font-size:10.5px;color:var(--gray500);margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.caption)}</div>`:''}
+      <div class="trash-acts"><button class="restore-btn" onclick="restorePost(${i})">↩ Restore</button><button class="pdel-btn" onclick="permDel(${i})">Delete Forever</button></div>
+    </div>`;
+  }).join('');
+}
+function restorePost(i){const p=S.trash.splice(i,1)[0];delete p.deletedAt;S.posts.push(p);renderAll();markDirty();renderTrash();toast('Restored ✓');}
+function permDel(i){if(!confirm('Delete forever?'))return;S.trash.splice(i,1);renderTrash();markDirty();updateSidebar();toast('Deleted forever');}
+function clearTrash(){if(!S.trash.length)return;if(!confirm(`Delete all ${S.trash.length} items forever?`))return;S.trash=[];renderTrash();markDirty();updateSidebar();toast('Trash emptied');}
+
+// ── PLATFORM MODAL ────────────────────────────────────────────────
+function openPlatModal(cid){
+  platCardId=cid;
+  const suggs=['Pinterest','YouTube','Snapchat','Threads','WhatsApp','Telegram','Reddit','Twitch'].filter(p=>!S.platforms.includes(p));
+  document.getElementById('pm-suggs').innerHTML=suggs.map(s=>`<button class="pm-sugg" onclick="addSuggPlat('${s}')">${s}</button>`).join('');
+  document.getElementById('pm-inp').value='';
+  document.getElementById('pm-bg').classList.add('open');
+}
+function closePlatModal(){document.getElementById('pm-bg').classList.remove('open');platCardId=null;}
+function addSuggPlat(n){addPlatGlobal(n);closePlatModal();}
+function addCustomPlat(){const v=document.getElementById('pm-inp').value.trim();if(!v)return;addPlatGlobal(v);closePlatModal();}
+function addPlatGlobal(n){
+  if(!S.platforms.includes(n))S.platforms.push(n);
+  if(platCardId!==null){const p=S.posts.find(x=>x.id===platCardId);if(p&&!p.platforms.includes(n))p.platforms.push(n);}
+  renderAll();markDirty();toast(`${n} added`);
+}
+
+// ── ADD POST MODAL ────────────────────────────────────────────────
+function renderModalPlatChecks(){
+  const c=document.getElementById('m-plat-checks');if(!c)return;
+  c.innerHTML=S.platforms.map(p=>`<label class="pchk"><input type="checkbox" class="mpc" value="${esc(p)}" ${['Instagram','Facebook'].includes(p)?'checked':''}> ${esc(p)}</label>`).join('')+`<button class="add-plat-btn" onclick="openPlatModal(null);closeModal()" style="margin-left:2px">+ Add</button>`;
+}
+function openModal(){document.getElementById('modal-bg').classList.add('open');document.body.style.overflow='hidden';renderModalPlatChecks();}
+function closeModal(){document.getElementById('modal-bg').classList.remove('open');document.body.style.overflow='';}
+function addPost(){
+  const d=document.getElementById('m-date').value;if(!d){alert('Please pick a date');return;}
+  const plats=Array.from(document.querySelectorAll('.mpc:checked')).map(c=>c.value);
+  if(!plats.length){alert('Select at least one platform');return;}
+  S.posts.push({id:S.nextId++,date:d,platforms:plats,theme:document.getElementById('m-theme').value,caption:document.getElementById('m-caption').value,cta:document.getElementById('m-cta').value,hashtags:document.getElementById('m-hash').value,format:document.getElementById('m-format').value,status:document.getElementById('m-status').value,imgs:[],ratio:'square',comment:''});
+  ['m-date','m-caption','m-cta','m-hash'].forEach(id=>{document.getElementById(id).value='';});
+  closeModal();renderAll();markDirty();toast('Post added ✓');
+}
+
+// ── MOBILE TABS ───────────────────────────────────────────────────
+function mobTab(tab,btn){
+  document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');
+  const sb=document.getElementById('sidebar');const ga=document.getElementById('grid-area');
+  if(tab==='tracker'){sb.classList.add('mob-active');ga.style.display='none';}
+  else{sb.classList.remove('mob-active');ga.style.display='';}
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+(async function init(){
+  if(!FIREBASE_URL){
+    // No Firebase — offline mode only
+    setSyncState('saved','Offline mode — no Firebase URL set');
+    applyHeader();renderAll();return;
+  }
+  setSyncState('syncing','Connecting to Firebase...');
+  showLivePill(false);
+  const remote = await fbPull();
+  if(remote){
+    S = migrate(remote);
+    lastVer = remote._ver||0;
+    saveLocal();
+    setSyncState('saved','Synced from cloud ✓');
+    showLivePill(true);
+    toast('✅ Loaded latest data from Firebase');
+  } else {
+    setSyncState('error','Could not reach Firebase — using local cache');
+    toast('⚠️ Firebase unreachable — using local data');
+  }
+  applyHeader();renderAll();
+  startPolling();
+})();
+
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+</script>
+
+
+</body></html>
